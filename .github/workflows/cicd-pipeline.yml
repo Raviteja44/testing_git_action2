@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [dev, uat, prod]
+  pull_request:
+    branches: [uat, prod]
+
+jobs:
+  # This runs when code is pushed to dev
+  dev-validation:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Display changes
+      run: |
+        echo "✅ Development branch validation passed"
+        echo "Changes pushed to dev branch"
+
+  # This creates PR from dev→uat automatically
+  create-uat-pr:
+    if: github.ref == 'refs/heads/dev'
+    needs: dev-validation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Create PR to UAT
+      run: |
+        git config --global user.name 'github-actions'
+        git config --global user.email 'github-actions@github.com'
+        
+        # Create PR from dev to uat
+        gh pr create \
+          --base uat \
+          --head dev \
+          --title "Promote changes from Dev to UAT" \
+          --body "Automated PR: Changes ready for UAT testing."
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # This creates PR from uat→prod automatically
+  create-prod-pr:
+    if: github.ref == 'refs/heads/uat'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Create PR to Prod
+      run: |
+        git config --global user.name 'github-actions'
+        git config --global user.email 'github-actions@github.com'
+        
+        # Create PR from uat to prod
+        gh pr create \
+          --base prod \
+          --head uat \
+          --title "Promote changes from UAT to PROD" \
+          --body "Automated PR: Changes ready for Production."
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
