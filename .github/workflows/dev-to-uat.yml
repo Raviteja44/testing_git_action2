@@ -5,6 +5,7 @@ on:
     branches: [dev]
 
 jobs:
+  # This runs when code is pushed to dev
   dev-validation:
     runs-on: ubuntu-latest
     steps:
@@ -18,7 +19,9 @@ jobs:
       run: |
         echo "✅ Development branch validation passed"
         echo "Current branch: ${{ github.ref }}"
+        echo "Repository: ${{ github.repository }}"
 
+  # This creates PR from dev→uat automatically
   create-uat-pr:
     needs: dev-validation
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.PAT_TOKEN }}
+        token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         fetch-depth: 0
     
     - name: Create PR to UAT
@@ -42,10 +45,9 @@ jobs:
             --base uat \
             --head dev \
             --title "Promote changes from Dev to UAT - ${{ github.sha }}" \
-            --body "Automated PR: Changes ready for UAT testing. Please review and merge." \
-            --reviewer "${{ vars.UAT_REVIEWERS }}"
+            --body "Automated PR: Changes ready for UAT testing. Please review and merge."
         else
           echo "PR from dev to uat already exists"
         fi
       env:
-        GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
